@@ -19,7 +19,11 @@ public class MatrixMulti {
 	private final Matrix A;
 	private final Matrix B;
 
-	private final AtomicReference<Matrix> result;
+	private final AtomicReference<Matrix> resultMatrix;
+
+	private final AtomicReference<Float> resultSumOfMatrix;
+
+	private final AtomicReference<Float> frobeniousOfMatrix;
 
 	private ThreadPoolExecutor executor;
 
@@ -40,32 +44,69 @@ public class MatrixMulti {
 			log.error("A.cols == {} != B.rows == {}", A.cols(), B.rows());
 		}
 
-		result = new AtomicReference<>(new Matrix(A.rows(), B.cols()));
+		resultMatrix = new AtomicReference<>(new Matrix(A.rows(), B.cols()));
+		resultSumOfMatrix = new AtomicReference<>(0.0F);
+		frobeniousOfMatrix = new AtomicReference<>(0.0F);
 
 	}
 
-	public Matrix calculateMatrix() throws InterruptedException {
+	protected void generateThreads() {
 		executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(numberOfThreads);
-
 		log.debug("Create executor with number of threads : {}", executor.getCorePoolSize());
 
-		multi(A, B);
-
-		return result.get();
 	}
 
-	private void multi(Matrix A, Matrix B) throws InterruptedException {
-
-		for (int r = 0; r < A.rows(); r++) {
-			for (int c = 0; c < B.cols(); c++) {
-				countPointFuture(r, c);
-			}
-		}
+	protected void waitUntilThreadsStop() throws InterruptedException {
 		executor.shutdown();
 		if (!executor.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS)) {
 			executor.shutdownNow();
 			throw new IllegalStateException("TOO MUCH TIME FOR CALCULATING");
 		}
+	}
+
+	public Matrix getResultMatrix() {
+		return resultMatrix.get();
+	}
+
+	public Float getResultSumOfMatrixElements() {
+		return resultSumOfMatrix.get();
+	}
+
+	public Float getFrobeniousNormOfMatrix() {
+		return frobeniousOfMatrix.get();
+	}
+
+	public void calculateMatrix() throws InterruptedException {
+		generateThreads();
+		doOperation(multiplyPointFuture());
+		waitUntilThreadsStop();
+
+		log.debug("Result matrix : {}", print(resultMatrix.get()));
+
+		generateThreads();
+		doOperation(countSumFuture());
+		waitUntilThreadsStop();
+
+		log.debug("Sum of matrix elements : {}", resultSumOfMatrix.get());
+
+		generateThreads();
+		doOperation(squareSumFuture());
+		waitUntilThreadsStop();
+
+		frobeniousOfMatrix.updateAndGet(aFloat -> (float) Math.sqrt(aFloat));
+
+		log.debug("Frobenious norm of matrix : {}", frobeniousOfMatrix.get());
+	}
+
+	private void doOperation(RunnableMatrixCreator creator) {
+
+		for (int r = 0; r < A.rows(); r++) {
+			for (int c = 0; c < B.cols(); c++) {
+				Runnable runnable = creator.create(r, c);
+				executor.execute(runnable);
+			}
+		}
+
 	}
 
 	protected Matrix read(String name) throws FileNotFoundException {
@@ -104,14 +145,24 @@ public class MatrixMulti {
 		return stringBuilder.toString();
 	}
 
-	private void countPointFuture(final int rf, final int cf) {
-		executor.execute(() -> {
-			float s = 0;
-			for (int k = 0; k < A.cols(); k++) {
-				s += A.get(rf, k) * B.get(k, cf);
+	private RunnableMatrixCreator multiplyPointFuture() {
+		return (r, c) -> () -> {
+			{
+				float s = 0;
+				for (int k = 0; k < A.cols(); k++) {
+					s += A.get(r, k) * B.get(k, c);
+				}
+				log.debug("COUNT r: {}, c: {}, s: {}", r, c, s);
+				resultMatrix.get().set(r, c, s);
 			}
-			log.debug("COUNT r: {}, c: {}, s: {}", rf, cf, s);
-			result.get().set(rf, cf, s);
-		});
+		};
+	}
+
+	private RunnableMatrixCreator countSumFuture() {
+		return (r, c) -> () -> resultSumOfMatrix.updateAndGet(f -> resultMatrix.get().get(r, c) + f);
+	}
+
+	private RunnableMatrixCreator squareSumFuture() {
+		return (r, c) -> () -> frobeniousOfMatrix.updateAndGet(f -> resultMatrix.get().get(r, c) * resultMatrix.get().get(r, c) + f);
 	}
 }

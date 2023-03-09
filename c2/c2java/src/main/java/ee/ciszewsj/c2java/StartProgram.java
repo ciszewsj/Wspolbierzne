@@ -11,7 +11,12 @@ public class StartProgram {
 	public StartProgram(ApplicationProperties applicationProperties) throws FileNotFoundException, InterruptedException {
 		log.info("READ : {} - {} - {}", applicationProperties.getMatrixA(), applicationProperties.getMatrixB(), applicationProperties.getNumberOfThreads());
 		MatrixMulti matrixMulti = new MatrixMulti(applicationProperties.getMatrixA(), applicationProperties.getMatrixB(), applicationProperties.getNumberOfThreads());
-		Matrix result = matrixMulti.calculateMatrix();
+		matrixMulti.calculateMatrix();
+		Matrix result = matrixMulti.getResultMatrix();
+		Float sum = matrixMulti.getResultSumOfMatrixElements();
+		Float frebousianNorm = matrixMulti.getFrobeniousNormOfMatrix();
 		log.info("Result A * B is : {}", MatrixMulti.print(result));
+		log.info("Sum of results matrix element is : {}", sum);
+		log.info("Frebousian norm of results matrix is : {}", frebousianNorm);
 	}
 }
