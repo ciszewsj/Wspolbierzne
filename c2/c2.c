@@ -340,6 +340,7 @@ int main(int argc, char **argv)
     }
     free(C);
 
+    free(thread_id);
     fclose(fpa);
     fclose(fpb);
 
