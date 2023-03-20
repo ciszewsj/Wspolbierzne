@@ -1,6 +1,5 @@
 from multiprocessing.managers import BaseManager
 from queue import Queue
-from threading import Event
 
 
 class QueueManager(BaseManager):
@@ -20,7 +19,7 @@ def multiply(dane):
     return result
 
 
-def main(event: Event or None):
+def main(event):
     QueueManager.register('in_queue')
     QueueManager.register('out_queue')
     m = QueueManager(address=("localhost", 5000), authkey=b'blah')
@@ -28,17 +27,15 @@ def main(event: Event or None):
 
     q: Queue = m.in_queue()
     o: Queue = m.out_queue()
-
     while True:
         if event is not None and event.is_set():
             break
         try:
             message = q.get(timeout=1)
-            if message["operation"] == "mult":
-                o.put({"i": message["i"], "result": multiply([message["A"], message["X"]])})
-        except Exception:
+            o.put({"i": message["i"], "result": multiply([message["A"], message["X"]])})
+        except:
             pass
 
 
 if __name__ == "__main__":
-    main(event=None)
+    main(None)

@@ -13,8 +13,8 @@ def main(ip="localhost", port=5000):
     QueueManager.register('out_queue', callable=lambda: out_queue)
     manager = QueueManager(address=(ip, int(port)), authkey=b'blah')
     server = manager.get_server()
-    print("Server started...")
     server.serve_forever()
+    print("Server started...")
 
 
 if __name__ == '__main__':
