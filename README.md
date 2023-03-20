@@ -15,3 +15,9 @@ c2.c RUN:
 cc c2.c -lm
 
 ./a.out {number of threads || default 4}
+
+c4.c RUN:
+
+cc c4.c -fopenmp -lm
+
+./a.out {number of threads || default 4} {max int to count || default 10000000}
