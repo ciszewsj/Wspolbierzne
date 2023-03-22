@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 	gettimeofday(&start, NULL);
 
 	{
-#pragma omp parallel for shared(a) private(i)
+#pragma omp parallel for shared(a) private(i) schedule(dynamic)
 		for (i = 2; i <= S; i++)
 		{
 			a[i] = 1;
@@ -33,12 +33,11 @@ int main(int argc, char **argv)
 	}
 
 	{
-#pragma omp parallel for shared(a, pierwsze, llpier) private(i) schedule(dynamic)
+#pragma omp parallel for ordered shared(a, pierwsze, llpier) private(i) schedule(dynamic)
 		for (i = 2; i <= S; i++)
 		{
 			if (a[i] == 1)
 			{
-#pragma omp critical
 				{
 					pierwsze[llpier++] = i;
 				}
