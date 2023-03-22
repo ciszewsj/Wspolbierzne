@@ -11,7 +11,9 @@ int main(int argc, char **argv)
 	long int S = (int)sqrt(N);
 	long int M = N / 10;
 	long int *a = malloc(sizeof(long int) * (S + 1));
-	long int *pierwsze = malloc((M) * sizeof(long int));
+	printf("ALOCATED A : %ld\n", N);
+	int *pierwsze = malloc((M) * sizeof(int));
+	printf("ALOCATED pierwsze : %ld\n", M);
 
 	long i, k, liczba, reszta;
 	long int lpodz;
@@ -33,7 +35,6 @@ int main(int argc, char **argv)
 	}
 
 	{
-#pragma omp parallel for ordered shared(a, pierwsze, llpier) private(i) schedule(dynamic)
 		for (i = 2; i <= S; i++)
 		{
 			if (a[i] == 1)
@@ -41,7 +42,7 @@ int main(int argc, char **argv)
 				{
 					pierwsze[llpier++] = i;
 				}
-#pragma omp parallel for private(k)
+#pragma omp parallel for shared(a) private(k) schedule(dynamic)
 				for (k = i + i; k <= S; k += i)
 				{
 					{
@@ -53,23 +54,25 @@ int main(int argc, char **argv)
 	}
 
 	lpodz = llpier;
-
-#pragma omp parallel for shared(llpier, pierwsze) private(k, reszta) schedule(dynamic)
-	for (liczba = S + 1; liczba <= N; liczba++)
 	{
+#pragma omp parallel for shared(llpier, pierwsze) private(k, reszta, liczba) schedule(dynamic)
+		for (liczba = S + 1; liczba <= N; liczba++)
+		{
 
-		for (k = 0; k < lpodz; k++)
-		{
-			reszta = (liczba % pierwsze[k]);
-			if (reszta == 0)
+			for (k = 0; k < lpodz; k++)
 			{
-				break;
+				reszta = (liczba % pierwsze[k]);
+				if (reszta == 0)
+				{
+					break;
+				}
 			}
-		}
-		if (reszta != 0)
-		{
+			if (reszta != 0)
 			{
-				pierwsze[llpier++] = liczba;
+				// #pragma omp critical
+				{
+					pierwsze[llpier++] = liczba;
+				}
 			}
 		}
 	}
@@ -88,6 +91,9 @@ int main(int argc, char **argv)
 
 	gettimeofday(&stop, NULL);
 	printf("Obliczenie zajeło =  %lu us\n", (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec);
+
+	free(a);
+	free(pierwsze);
 
 	return 0;
 }
