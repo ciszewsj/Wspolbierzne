@@ -1,4 +1,4 @@
-from multiprocessing.managers import BaseManager
+from multiprocessing.managers import BaseManager, convert_to_error
 from queue import Queue
 
 
@@ -19,23 +19,21 @@ def multiply(dane):
     return result
 
 
-def main(event):
+def main():
     QueueManager.register('in_queue')
     QueueManager.register('out_queue')
     m = QueueManager(address=("localhost", 5000), authkey=b'blah')
     m.connect()
-
     q: Queue = m.in_queue()
     o: Queue = m.out_queue()
+
     while True:
-        if event is not None and event.is_set():
-            break
         try:
-            message = q.get(timeout=1)
+            message = q.get_nowait()
             o.put({"i": message["i"], "result": multiply([message["A"], message["X"]])})
         except:
             pass
 
 
 if __name__ == "__main__":
-    main(None)
+    main()

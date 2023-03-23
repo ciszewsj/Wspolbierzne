@@ -2,9 +2,7 @@ import sys
 import time
 from multiprocessing.managers import BaseManager
 from queue import Queue
-from threading import Thread, Event
-
-from client import main as client
+from threading import Thread
 
 
 class QueueManager(BaseManager):
@@ -36,7 +34,7 @@ def read(file_name, isA: bool):
 A, X = [], []
 
 
-def main(file_name_a, file_name_x, number_cpus) -> int:
+def main(file_name_a, file_name_x) -> int:
     global A
     global X
 
@@ -54,18 +52,11 @@ def main(file_name_a, file_name_x, number_cpus) -> int:
     a_thread.join()
     b_thread.join()
 
-    threads = []
-    event = Event()
-
-    for i in range(0, number_cpus):
-        threads.append(Thread(target=client, args=(event,)))
-        threads[i].start()
-
     sleep_time = time.time_ns()
 
     number = len(A)
 
-    result = [None for i in range(number)]
+    result = [None for _ in range(number)]
 
     for i in range(0, number):
         q.put({"operation": "mult", "i": i, "A": A[i], "X": X})
@@ -76,21 +67,16 @@ def main(file_name_a, file_name_x, number_cpus) -> int:
         info = o.get()
         result[info["i"]] = info["result"]
         r.remove(info["i"])
-        end_time = time.time_ns() - sleep_time
-
-    event.set()
-    for i in range(0, number_cpus):
-        threads[i].join()
+    end_time = time.time_ns() - sleep_time
 
     return end_time
 
 
-def execute(number_cpus, file_a, file_b):
-    k = main(file_a, file_b, number_cpus)
+def execute(file_a, file_b):
+    k = main(file_a, file_b)
     return k
 
 
 if __name__ == "__main__":
-    number_cpus = int(sys.argv[1]) if len(sys.argv) > 1 else 2
-    file_name_a = sys.argv[2] if len(sys.argv) > 2 else "A.dat"
-    file_name_x = sys.argv[3] if len(sys.argv) > 3 else "X.dat"
+    file_name_a = sys.argv[1] if len(sys.argv) > 1 else "A.dat"
+    file_name_x = sys.argv[2] if len(sys.argv) > 2 else "X.dat"
