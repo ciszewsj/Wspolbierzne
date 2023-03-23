@@ -9,7 +9,15 @@ int main(int argc, char **argv)
 	int numberOfThreads = argc > 1 ? atoi(argv[1]) : 4;
 	long int N = argc > 2 ? atoi(argv[2]) : 10000000;
 	long int S = (int)sqrt(N);
-	long int M = N / 10;
+	long int M;
+	if (N > 10000)
+	{
+		M = N / 10;
+	}
+	else
+	{
+		M = N;
+	}
 	long int *a = malloc(sizeof(long int) * (S + 1));
 	printf("ALOCATED A : %ld\n", N);
 	int *pierwsze = malloc((M) * sizeof(int));
@@ -33,6 +41,7 @@ int main(int argc, char **argv)
 			a[i] = 1;
 		}
 	}
+
 
 	{
 		for (i = 2; i <= S; i++)
@@ -69,7 +78,7 @@ int main(int argc, char **argv)
 			}
 			if (reszta != 0)
 			{
-				// #pragma omp critical
+				#pragma omp critical
 				{
 					pierwsze[llpier++] = liczba;
 				}
