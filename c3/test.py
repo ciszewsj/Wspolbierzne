@@ -1,10 +1,11 @@
 import sys
-import time
 from multiprocessing import Process
 
+from client import main as client
 from manager import main as manager
 from server import execute as do_operation
-from client import main as client
+
+STRATEGY = 1
 
 if __name__ == "__main__":
 
@@ -12,7 +13,7 @@ if __name__ == "__main__":
     server = Process(target=manager)
     server.start()
     print("Server Started...")
-    for n in [1, 2, 4, 8, 16, 32, 64]:
+    for n in [1, 2, 3, 4, 5, 6, 7, 8]:
         processes = []
         for i in range(0, n):
             processes.append(Process(target=client))
@@ -20,7 +21,7 @@ if __name__ == "__main__":
 
         result = 0
         for i in range(k):
-            result += do_operation("A.dat", "X.dat")
+            result += do_operation("A.dat", "X.dat", STRATEGY)
         result = result / k
         print('threads: {:2}, time: {}'.format(n, result))
 

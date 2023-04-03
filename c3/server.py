@@ -9,7 +9,7 @@ class QueueManager(BaseManager):
     pass
 
 
-def read(file_name, isA: bool):
+def read(file_name, is_a: bool):
     f = open(file_name, "r")
     nr = int(f.readline())
     nc = int(f.readline())
@@ -23,7 +23,7 @@ def read(file_name, isA: bool):
         if c == nc:
             c = 0
             r += 1
-    if isA:
+    if is_a:
         global A
         A = a
     else:
@@ -34,7 +34,7 @@ def read(file_name, isA: bool):
 A, X = [], []
 
 
-def main(file_name_a, file_name_x) -> int:
+def main(file_name_a, file_name_x, strategy: int = 0) -> int:
     global A
     global X
 
@@ -55,25 +55,32 @@ def main(file_name_a, file_name_x) -> int:
     sleep_time = time.time_ns()
 
     number = len(A)
+    result = [0 for _ in range(0, number)]
 
-    result = [None for _ in range(number)]
+    divide = 2
 
-    for i in range(0, number):
-        q.put({"operation": "mult", "i": i, "A": A[i], "X": X})
-
-    r = [i for i in range(0, number)]
+    if strategy == 0:
+        number = len(A)
+        for i in range(0, number):
+            q.put({"operation": "mult", "i": i, "A": A[i], "X": X})
+    else:
+        for i in range(0, number):
+            for j in range(0, divide):
+                start = len(A[i]) // divide * j
+                stop = len(A[i]) // divide * (j + 1)
+                q.put({"operation": "mult", "i": i, "A": A[i][start:stop], "X": X})
+        number = len(A) * divide
 
     for i in range(0, number):
         info = o.get()
-        result[info["i"]] = info["result"]
-        r.remove(info["i"])
+        result[info["i"]] += info["result"]
     end_time = time.time_ns() - sleep_time
 
     return end_time
 
 
-def execute(file_a, file_b):
-    k = main(file_a, file_b)
+def execute(file_a, file_b, strategy):
+    k = main(file_a, file_b, strategy)
     return k
 
 
