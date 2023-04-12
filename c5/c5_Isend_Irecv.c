@@ -29,6 +29,46 @@ int main(int argc, char **argv)
     double local_begin = begin + rank * local_num_points * (end - begin) / num_points;
     double local_end = local_begin + local_num_points * (end - begin) / num_points;
 
+    if (rank == 0)
+    {
+        int chunk_size = num_points / size;
+        int remainder = num_points % size;
+        int start, end_chunk;
+        for (int i = 1; i < size; i++)
+        {
+            if (i < remainder)
+            {
+                start = i * (chunk_size + 1);
+                end_chunk = start + chunk_size + 1;
+            }
+            else
+            {
+                start = i * chunk_size + remainder;
+                end_chunk = start + chunk_size;
+            }
+
+            double local_begin = begin + i * (end - begin) / size;
+            double local_end = local_begin + (end - begin) / size;
+            MPI_Isend(&local_begin, 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &request_send[0]);
+            MPI_Isend(&local_end, 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &request_send[0]);
+            MPI_Isend(&chunk_size, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &request_send[0]);
+        }
+        end = begin + (end - begin) / size;
+        num_points = num_points - chunk_size * (size - 1);
+
+        local_begin = begin;
+        local_end = end;
+        local_num_points = num_points;
+    }
+    else
+    {
+        // Receive input values from rank 0
+        MPI_Irecv(&local_begin, 1, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &request_recv[0]);
+        MPI_Irecv(&local_end, 1, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &request_recv[0]);
+        MPI_Irecv(&local_num_points, 1, MPI_INT, 0, tag, MPI_COMM_WORLD, &request_recv[0]);
+        MPI_Wait(&request_recv[0], &status);
+    }
+
     printf("<<< %f - %f - %d >>>\n", local_begin, local_end, local_num_points);
 
     local_sum = integrate(sin, local_begin, local_end, local_num_points);
@@ -47,7 +87,6 @@ int main(int argc, char **argv)
     else
     {
         MPI_Isend(&local_sum, 1, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &request_send[0]);
-        MPI_Wait(&request_send[0], &status);
     }
 
     if (rank == 0)
