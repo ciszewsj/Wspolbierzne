@@ -3,12 +3,19 @@
 #include <mpi.h>
 #include <math.h>
 #include "count_integral.h"
+#include <sys/time.h>
+
+double fun(double x){
+    return x*x/3;
+}
 
 int main(int argc, char **argv)
 {
     int rank, size;
     double begin, end, result;
     int num_points;
+    struct timeval stop, start;
+    gettimeofday(&start, NULL);
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -64,7 +71,7 @@ int main(int argc, char **argv)
     double local_end = end;
     int chunk_size = num_points;
     // Divide work among processes
-    double local_sum = integrate(sin, local_begin, local_end, chunk_size);
+    double local_sum = integrate(fun, local_begin, local_end, chunk_size);
 
     printf("<%f - %f - %d = %f >\n", local_begin, local_end, chunk_size, local_sum);
 
@@ -80,6 +87,11 @@ int main(int argc, char **argv)
             result += recv_sum;
         }
 
+        gettimeofday(&stop, NULL);
+        printf("Obliczenie zajeło =  %lu us\n", (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec);
+        printf("Obliczenie zajeło =  %lf us\n", MPI_Wtime());
+
+        
         printf("Result: %lf\n", result);
     }
     else

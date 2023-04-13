@@ -3,6 +3,13 @@
 #include <stdlib.h>
 #include <math.h>
 #include "count_integral.h"
+#include <sys/time.h>
+
+
+double fun(double x){
+    return x*x/3;
+}
+
 
 typedef struct
 {
@@ -18,6 +25,10 @@ int main(int argc, char **argv)
     double local_begin, local_end;
     Element local;
     int num_points_per_process = 0;
+
+    struct timeval stop, start;
+    gettimeofday(&start, NULL);
+
     if (argc != 4)
     {
         printf("Usage: mpiexec -n num_procs %s begin end num_points\n", argv[0]);
@@ -78,16 +89,17 @@ int main(int argc, char **argv)
 
     MPI_Scatter(arr, 1, mpi_point_type, &local, 1, mpi_point_type, 0, MPI_COMM_WORLD);
 
-    local_result = integrate(sin, local.begin, local.end, local.chunk_size);
+    local_result = integrate(fun, local.begin, local.end, local.chunk_size);
     printf("<<< %f - %f - %d  << %d >>  =  %f>>>\n", local.begin, local.end, local.chunk_size, rank, local_result);
 
     MPI_Reduce(&local_result, &result, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    if (rank == 0)
+    MPI_Finalize();
+     if (rank == 0)
     {
         printf("Result: %lf\n", result);
+        gettimeofday(&stop, NULL);
+        printf("Obliczenie zajeło =  %lu us\n", (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec);
     }
-
-    MPI_Finalize();
     return 0;
 }

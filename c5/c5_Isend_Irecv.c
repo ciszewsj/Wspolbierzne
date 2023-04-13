@@ -3,6 +3,11 @@
 #include <math.h>
 #include <mpi.h>
 #include "count_integral.h"
+#include <sys/time.h>
+
+double fun(double x){
+    return x*x/3;
+}
 
 int main(int argc, char **argv)
 {
@@ -10,6 +15,10 @@ int main(int argc, char **argv)
     double begin, end;
     int num_points;
     double local_sum = 0.0, result = 0.0;
+
+    struct timeval stop, start;
+    gettimeofday(&start, NULL);
+
     MPI_Status status;
     MPI_Request request_send[2], request_recv[2];
     begin = atof(argv[1]);
@@ -66,12 +75,12 @@ int main(int argc, char **argv)
         MPI_Irecv(&local_begin, 1, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &request_recv[0]);
         MPI_Irecv(&local_end, 1, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &request_recv[0]);
         MPI_Irecv(&local_num_points, 1, MPI_INT, 0, tag, MPI_COMM_WORLD, &request_recv[0]);
-        MPI_Wait(&request_recv[0], &status);
+        // MPI_Wait(&request_recv[0], &status);
     }
 
     printf("<<< %f - %f - %d >>>\n", local_begin, local_end, local_num_points);
 
-    local_sum = integrate(sin, local_begin, local_end, local_num_points);
+    local_sum = integrate(fun, local_begin, local_end, local_num_points);
 
     if (rank == 0)
     {
@@ -92,6 +101,8 @@ int main(int argc, char **argv)
     if (rank == 0)
     {
         printf("Result: %lf\n", result);
+        gettimeofday(&stop, NULL);
+        printf("Obliczenie zajeło =  %lu us\n", (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec);
     }
 
     MPI_Finalize();
