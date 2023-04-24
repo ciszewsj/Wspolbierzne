@@ -5,7 +5,6 @@ import akka.util.Timeout
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-
 case class Subtract(index: Int, row: Array[Double])
 
 case object Divide
@@ -46,21 +45,33 @@ class RowActor(val rowID: Int, var row: Array[Double]) extends Actor {
   }
 }
 
-object main extends App {
+object MainFile extends App {
   def printArray(arr: Array[Double]): String = {
     arr.mkString(", ")
   }
 
-  val timeoutTime = 5.seconds
-  val eps: Double = 0.0001
-  implicit val timeout: Timeout = timeoutTime
-  var a: Array[Double] = Array(1, 2, 3, 4)
-  var b: Array[Double] = Array(6, 12, 4, 3)
-  var c: Array[Double] = Array(7, 8, 3, 2)
+  val aFileName: String = if (args.length > 1) args(1) else ".\\resources\\A.txt"
+  val yFileName: String = if (args.length > 2) args(2) else ".\\resources\\Y.txt"
+  val resultFileName: String = if (args.length > 3) args(3) else ".\\resources\\result.txt"
+  val timeoutTime = if (args.length > 4) args(4).toInt.seconds else 5.seconds
+  val eps: Double = if (args.length > 5) args(5).toDouble else 0.0001
 
+  println("ARGS ARGUMENTS:")
+  println("    1) - aFile path = " + aFileName)
+  println("    2) - yFile path = " + yFileName)
+  println("    3) - yFile path = " + resultFileName)
+  println("    4) - max wait seconds = " + timeoutTime)
+  println("    5) - eps = " + eps)
+  println()
+
+  implicit val timeout: Timeout = timeoutTime
+
+
+  val reader = new ReadFile(aFileName, yFileName)
+
+  val matrix = reader.getMatrixFromFiles
 
   val system = ActorSystem()
-  val matrix: Array[Array[Double]] = Array(a, b, c)
   val actor_array: Array[ActorRef] = matrix.zipWithIndex.map { case (value, index) => system.actorOf(Props(new RowActor(index, value))) }
 
   for (i <- actor_array.indices) {
@@ -81,7 +92,6 @@ object main extends App {
         println("Matrix have 0 on diagonal")
         sys.exit()
       }
-
     }
     actor_array(i) ! Divide
     val rowResponse: GetRowResponse = Await.result((actor_array(i) ? GetRow).mapTo[GetRowResponse], timeoutTime)
@@ -97,6 +107,9 @@ object main extends App {
     println("ID " + i + " : " + printArray(Await.result((actor_array(i) ? GetRow).mapTo[GetRowResponse], timeoutTime).row))
     result(i) = Await.result((actor_array(i) ? GetResult).mapTo[Double], timeoutTime)
   }
+  println()
   println("Result:\n" + printArray(result))
+  val writer = new WriterFile(resultFileName)
+  writer.saveMatrixToFile(result)
   sys.exit()
 }
