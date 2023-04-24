@@ -45,7 +45,7 @@ class RowActor(val rowID: Int, var row: Array[Double]) extends Actor {
   }
 }
 
-object MainFile extends App {
+object MainWithForLoopNavigation extends App {
   def printArray(arr: Array[Double]): String = {
     arr.mkString(", ")
   }
