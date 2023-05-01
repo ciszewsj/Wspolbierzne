@@ -3,8 +3,8 @@ import scala.io.Source
 
 class ReadFile(aFileName: String, yFileName: String) {
 
-  def getMatrixFromFiles: Array[Array[Double]] = {
-    var matrix = readMatrixFromFile(aFileName)
+  def getMatrixFromFiles: (Array[Array[Double]], Array[Double]) = {
+    val matrix = readMatrixFromFile(aFileName)
     if (matrix.length != matrix(0).length) {
       throw new IllegalStateException("Wrong matrix A size")
     }
@@ -13,8 +13,7 @@ class ReadFile(aFileName: String, yFileName: String) {
       throw new IllegalStateException("Wrong matrix B size")
     }
 
-    matrix = matrix.zip(matrix2).map { case (row1, row2) => row1 :+ row2(0) }
-    matrix
+    (matrix, matrix2.flatten)
   }
 
   private def readMatrixFromFile(fileName: String): Array[Array[Double]] = {
@@ -34,20 +33,4 @@ class ReadFile(aFileName: String, yFileName: String) {
     matrix
   }
 
-}
-
-object MainFileReader extends App {
-
-  def printMatrix(matrix: Array[Array[Double]]): Unit = {
-    matrix.foreach(row => {
-      row.foreach(cell => print(s"$cell\t"))
-      println()
-    })
-  }
-
-  val reader = new ReadFile(".\\resources\\A.txt", ".\\resources\\Y.txt")
-  val matrix = reader.getMatrixFromFiles
-  printMatrix(matrix)
-
-  sys.exit()
 }
