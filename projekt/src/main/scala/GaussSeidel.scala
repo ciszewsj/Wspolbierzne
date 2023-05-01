@@ -23,6 +23,12 @@ class RowActorGS(private val index: Int, private val a: Array[Double], private v
   var end: Boolean = false
   var iteration = 0
 
+  if (a(index) == 0) {
+    throw new IllegalArgumentException("Matrix have 0 on diagonal")
+    sys.exit()
+
+  }
+
   private def approxEqual(x: Double, y: Double, tolerance: Double): Boolean = {
     val diff = (x - y).abs
     if (x == y) true
