@@ -7,7 +7,7 @@ import scala.concurrent.duration.FiniteDuration
 
 case class SendNewX(index: Int, y: Double)
 
-case class Start(actors: Array[ActorRef], iteration: Int, eps: Double)
+case class Start(actors: Array[ActorRef])
 
 case class Stop()
 
@@ -15,15 +15,13 @@ case class Ended()
 
 case class Result()
 
-class RowActorGS(private val index: Int, private val a: Array[Double], private val y: Double) extends Actor {
+class RowActorGS(private val index: Int, private val a: Array[Double], private val y: Double, max_iteration: Int, eps: Double) extends Actor {
   var x: Array[Double] = Array.fill(a.length)(0.0)
   var old_x: Array[Double] = x.clone()
   var actors: Array[ActorRef] = new Array[ActorRef](0)
   var received = 0
   var end: Boolean = false
   var iteration = 0
-  var max_iteration = 0
-  var eps = 0.0
 
   private def approxEqual(x: Double, y: Double, tolerance: Double): Boolean = {
     val diff = (x - y).abs
@@ -49,10 +47,8 @@ class RowActorGS(private val index: Int, private val a: Array[Double], private v
 
   override def receive: Receive = {
 
-    case Start(actors, iteration, eps) =>
+    case Start(actors) =>
       this.actors = actors
-      this.max_iteration = iteration
-      this.eps = eps
       calculate()
     case SendNewX(index, y) =>
       received += 1
@@ -79,10 +75,10 @@ class GaussSeidel(val timeoutTime: FiniteDuration, val eps: Double, val iteratio
     val system = ActorSystem()
     val actor_array = new Array[ActorRef](A.length)
     for (i <- A.indices) {
-      actor_array(i) = system.actorOf(Props(new RowActorGS(i, A(i), Y(i))))
+      actor_array(i) = system.actorOf(Props(new RowActorGS(i, A(i), Y(i), iteration, eps)))
     }
 
-    A.indices.foreach(i => actor_array(i) ! Start(actor_array, iteration, eps))
+    A.indices.foreach(i => actor_array(i) ! Start(actor_array))
 
     do {
       if (Await.result((actor_array(0) ? Ended).mapTo[Boolean], timeoutTime)) {
