@@ -30,6 +30,10 @@ object Main extends App {
   val reader = new ReadFile(aFileName, yFileName)
   val matrix = reader.getMatrixFromFiles
 
+  if (matrix._1.length != matrix._2.length || matrix._1.length != matrix._1(0).length) {
+    throw new IllegalArgumentException("Matrix's sizes not comparable")
+  }
+
   val solver: Solver = if (algorithm == 0) new GaussSeidel(timeoutTime, eps, iteration) else new GaussJordan(timeoutTime, eps)
 
   val time: Long = new Date().getTime
