@@ -1,7 +1,35 @@
-import scala.concurrent.duration.FiniteDuration
-import scala.math.abs
+import Main.printArray
+import akka.actor.Actor
 
-class GaussSeidel(val timeoutTime: FiniteDuration, val eps: Double, val iteration: Int, val max_error: Double) extends Solver {
+import scala.concurrent.duration.FiniteDuration
+
+class RowActorGS(val rowID: Int, var row: Array[Double]) extends Actor {
+
+  var tmpRowId: Int = rowID
+
+  override def receive: Receive = {
+
+    case Subtract(index: Int, array: Array[Double]) =>
+      val ratio = row(index) / array(index)
+      for (i <- Range(index, row.length)) {
+        row(i) -= array(i) * ratio
+      }
+
+    case Divide =>
+      val ratio = row(tmpRowId)
+      row = row.map(x => x / ratio)
+
+    case GetRow => sender() ! GetRowResponse(tmpRowId, row)
+
+    case GetResult => sender() ! row.last
+
+    case IsZeroElement(index: Int, eps: Double) => sender() ! (row(index).abs <= eps)
+
+    case ChangeRow(index: Int) => tmpRowId = index
+  }
+}
+
+class GaussSeidel(val timeoutTime: FiniteDuration, val eps: Double, val iteration: Int) extends Solver {
 
   private def approxEqual(x: Double, y: Double, tolerance: Double): Boolean = {
     val diff = (x - y).abs
@@ -10,41 +38,31 @@ class GaussSeidel(val timeoutTime: FiniteDuration, val eps: Double, val iteratio
     else diff / (x.abs + y.abs) < tolerance
   }
 
-
   override def solve(A: Array[Array[Double]], Y: Array[Double]): Array[Double] = {
     var x: Array[Double] = Array.fill(Y.length)(0.0)
     var itCount = 0
 
-    for (i <- 0 until A.length - 1) {
-      for (j <- i until A.length) {
-        if (abs(A(i)(i)) < abs(A(j)(i))) {
-          val tmp = A(i)
-          A(i) = A(j)
-          A(j) = tmp
-          val tmp2 = Y(i)
-          Y(i) = Y(j)
-          Y(j) = tmp2
-        }
-      }
+    for (x <- A.indices) {
+      println(printArray(A(x)))
     }
-
+    println(printArray(Y))
+    println(A.length, A(0).length, Y.length)
     while (itCount < iteration) {
-
       val xNew = Array.fill(x.length)(0.0)
       for (i <- A.indices) {
         val s1 = (0 until i).map(j => A(i)(j) * xNew(j)).sum
         val s2 = ((i + 1) until A(i).length).map(j => A(i)(j) * x(j)).sum
         xNew(i) = (Y(i) - s1 - s2) / A(i)(i)
       }
-
-      if (x.corresponds(xNew)(approxEqual(_, _, max_error))) {
+      if (x.corresponds(xNew)(approxEqual(_, _, eps))) {
         itCount = iteration
       }
       else {
-        x = xNew
+        x = xNew.clone()
         itCount += 1
       }
     }
+
     x
   }
 }

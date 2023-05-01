@@ -19,7 +19,7 @@ case class IsZeroElement(rowId: Int, eps: Double)
 
 case class ChangeRow(index: Int)
 
-class RowActor(val rowID: Int, var row: Array[Double]) extends Actor {
+class RowActorGJ(val rowID: Int, var row: Array[Double]) extends Actor {
 
   var tmpRowId: Int = rowID
 
@@ -54,7 +54,7 @@ class GaussJordan(val timeoutTime: FiniteDuration, val eps: Double) extends Solv
     implicit val timeout: Timeout = timeoutTime
 
     val system = ActorSystem()
-    val actor_array: Array[ActorRef] = matrix.zipWithIndex.map { case (value, index) => system.actorOf(Props(new RowActor(index, value))) }
+    val actor_array: Array[ActorRef] = matrix.zipWithIndex.map { case (value, index) => system.actorOf(Props(new RowActorGJ(index, value))) }
 
     for (i <- actor_array.indices) {
       if (Await.result((actor_array(i) ? IsZeroElement(i, eps)).mapTo[Boolean], timeoutTime)) {

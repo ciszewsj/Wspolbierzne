@@ -12,12 +12,15 @@ object Main extends App {
   val resultFileName: String = if (args.length >= 3) args(2) else ".\\resources\\result.txt"
   val timeoutTime = if (args.length >= 4) args(3).toInt.seconds else 5.seconds
   val eps: Double = if (args.length >= 5) args(4).toDouble else 0.0001
+  val iteration: Int = 10
+  val algorithm: Int = 0
   println("ARGS ARGUMENTS:")
   println("    1) - aFile path = " + aFileName)
   println("    2) - yFile path = " + yFileName)
   println("    3) - yFile path = " + resultFileName)
   println("    4) - max wait seconds = " + timeoutTime)
   println("    5) - eps = " + eps)
+  println("    6) - iteration = " + iteration)
   println()
 
   implicit val timeout: Timeout = timeoutTime
@@ -25,7 +28,7 @@ object Main extends App {
   val reader = new ReadFile(aFileName, yFileName)
   val matrix = reader.getMatrixFromFiles
 
-  val solver: Solver = if (1 == 1) new GaussSeidel(timeoutTime, eps, 1000, 0.001) else new GaussJordan(timeoutTime, eps)
+  val solver: Solver = if (algorithm == 0) new GaussSeidel(timeoutTime, eps, iteration) else new GaussJordan(timeoutTime, eps)
 
   val result = solver.solve(matrix._1, matrix._2)
   println()

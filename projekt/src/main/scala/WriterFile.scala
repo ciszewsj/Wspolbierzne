@@ -8,4 +8,11 @@ class WriterFile(filePath: String) {
     pw.println(matrix.mkString(" "))
     pw.close()
   }
+
+  def saveMatrixToFile(matrix: Array[Array[Double]]): Unit = {
+    val pw = new PrintWriter(new File(filePath))
+    pw.println(matrix.length + " " + matrix(0).length)
+    matrix.foreach(row => pw.println(row.mkString(" ")))
+    pw.close()
+  }
 }
