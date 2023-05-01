@@ -1,35 +1,29 @@
-import Main.printArray
-import akka.actor.Actor
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.pattern.ask
+import akka.util.Timeout
 
+import scala.concurrent.Await
 import scala.concurrent.duration.FiniteDuration
 
-class RowActorGS(val rowID: Int, var row: Array[Double]) extends Actor {
+case class SendNewX(index: Int, y: Double)
 
-  var tmpRowId: Int = rowID
+case class Start(actors: Array[ActorRef], iteration: Int, eps: Double)
 
-  override def receive: Receive = {
+case class Stop()
 
-    case Subtract(index: Int, array: Array[Double]) =>
-      val ratio = row(index) / array(index)
-      for (i <- Range(index, row.length)) {
-        row(i) -= array(i) * ratio
-      }
+case class Ended()
 
-    case Divide =>
-      val ratio = row(tmpRowId)
-      row = row.map(x => x / ratio)
+case class Result()
 
-    case GetRow => sender() ! GetRowResponse(tmpRowId, row)
-
-    case GetResult => sender() ! row.last
-
-    case IsZeroElement(index: Int, eps: Double) => sender() ! (row(index).abs <= eps)
-
-    case ChangeRow(index: Int) => tmpRowId = index
-  }
-}
-
-class GaussSeidel(val timeoutTime: FiniteDuration, val eps: Double, val iteration: Int) extends Solver {
+class RowActorGS(private val index: Int, private val a: Array[Double], private val y: Double) extends Actor {
+  var x: Array[Double] = Array.fill(a.length)(0.0)
+  var old_x: Array[Double] = x.clone()
+  var actors: Array[ActorRef] = new Array[ActorRef](0)
+  var received = 0
+  var end: Boolean = false
+  var iteration = 0
+  var max_iteration = 0
+  var eps = 0.0
 
   private def approxEqual(x: Double, y: Double, tolerance: Double): Boolean = {
     val diff = (x - y).abs
@@ -38,30 +32,63 @@ class GaussSeidel(val timeoutTime: FiniteDuration, val eps: Double, val iteratio
     else diff / (x.abs + y.abs) < tolerance
   }
 
-  override def solve(A: Array[Array[Double]], Y: Array[Double]): Array[Double] = {
-    var x: Array[Double] = Array.fill(Y.length)(0.0)
-    var itCount = 0
+  private def calculate(): Unit = {
+    if (!(iteration < max_iteration) || iteration != 0 && old_x.corresponds(x)(approxEqual(_, _, eps))) {
+      actors.foreach(actor => actor ! Stop)
+    }
+    else {
+      old_x = x
+      x = Array.fill(a.length)(0.0)
+      val s1 = (0 until index).map(j => a(j) * old_x(j)).sum
+      val s2 = (index + 1 until a.length).map(j => a(j) * old_x(j)).sum
+      val x_new = (y - s1 - s2) / a(index)
+      actors.foreach(actor => actor ! SendNewX(index, x_new))
+      iteration += 1
+    }
+  }
 
-    for (x <- A.indices) {
-      println(printArray(A(x)))
+  override def receive: Receive = {
+
+    case Start(actors, iteration, eps) =>
+      this.actors = actors
+      this.max_iteration = iteration
+      this.eps = eps
+      calculate()
+    case SendNewX(index, y) =>
+      received += 1
+      x(index) = y
+      if (received == a.length) {
+        calculate()
+        received = 0
+      }
+    case Stop =>
+      end = true
+    case Ended =>
+      sender() ! this.end
+    case Result =>
+      sender() ! x
+  }
+}
+
+class GaussSeidel(val timeoutTime: FiniteDuration, val eps: Double, val iteration: Int) extends Solver {
+
+  override def solve(A: Array[Array[Double]], Y: Array[Double]): Array[Double] = {
+    var x: Array[Double] = null
+
+    implicit val timeout: Timeout = timeoutTime
+    val system = ActorSystem()
+    val actor_array = new Array[ActorRef](A.length)
+    for (i <- A.indices) {
+      actor_array(i) = system.actorOf(Props(new RowActorGS(i, A(i), Y(i))))
     }
-    println(printArray(Y))
-    println(A.length, A(0).length, Y.length)
-    while (itCount < iteration) {
-      val xNew = Array.fill(x.length)(0.0)
-      for (i <- A.indices) {
-        val s1 = (0 until i).map(j => A(i)(j) * xNew(j)).sum
-        val s2 = ((i + 1) until A(i).length).map(j => A(i)(j) * x(j)).sum
-        xNew(i) = (Y(i) - s1 - s2) / A(i)(i)
+
+    A.indices.foreach(i => actor_array(i) ! Start(actor_array, iteration, eps))
+
+    do {
+      if (Await.result((actor_array(0) ? Ended).mapTo[Boolean], timeoutTime)) {
+        x = Await.result((actor_array(0) ? Result).mapTo[Array[Double]], timeoutTime)
       }
-      if (x.corresponds(xNew)(approxEqual(_, _, eps))) {
-        itCount = iteration
-      }
-      else {
-        x = xNew.clone()
-        itCount += 1
-      }
-    }
+    } while (x == null)
 
     x
   }

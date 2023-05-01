@@ -1,14 +1,14 @@
 object Generator extends App {
 
-  val size = 6
+  val size = 1000
 
   val path = ".\\resources\\"
 
   val A = Array.ofDim[Double](size, size)
   val r = scala.util.Random
-  for (i <- 0 until 6) {
+  for (i <- 0 until size) {
     var rowSum = 0.0
-    for (j <- 0 until 6) {
+    for (j <- 0 until size) {
       if (i != j) {
         A(i)(j) = r.nextDouble()
         rowSum += math.abs(A(i)(j))
