@@ -78,6 +78,7 @@ int main(int argc, char **argv)
                      &partnerValue, 1, MPI_INT, reciveFromRank, 0,
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         myValue = nwd(myValue, partnerValue);
+        printf("Half result %d = %d\n", world_rank, myValue);
     }
     if (world_rank == 0)
     {

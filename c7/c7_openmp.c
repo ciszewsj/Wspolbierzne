@@ -17,20 +17,24 @@ int main(int argc, char **argv)
     gettimeofday(&start, NULL);
     int i;
     double x, y;
-#pragma omp parallel for shared(point_in_circle) private(i, x, y)
-    for (i = 0; i < elem; i++)
+
+    int local;
+#pragma omp parallel shared(point_in_circle) private(i, x, y, local)
     {
-        x = (double)rand() / ((double)RAND_MAX / 2) - 1;
-        y = (double)rand() / ((double)RAND_MAX / 2) - 1;
-        if (x * x + y * y < 1)
+        local = 0;
+#pragma omp for
+        for (i = 0; i < elem; i++)
         {
-#pragma omp critical
+            x = (double)rand() / ((double)RAND_MAX / 2) - 1;
+            y = (double)rand() / ((double)RAND_MAX / 2) - 1;
+            if (x * x + y * y < 1)
             {
-                point_in_circle++;
+                local++;
             }
         }
+#pragma omp critical
+        point_in_circle += local;
     }
-
     gettimeofday(&stop, NULL);
 
     double result = 4 * ((double)point_in_circle) / ((double)elem);

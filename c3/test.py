@@ -5,7 +5,7 @@ from client import main as client
 from manager import main as manager
 from server import execute as do_operation
 
-STRATEGY = 1
+STRATEGY = 0
 
 if __name__ == "__main__":
 
@@ -23,7 +23,7 @@ if __name__ == "__main__":
         for i in range(k):
             result += do_operation("A.dat", "X.dat", STRATEGY)
         result = result / k
-        print('threads: {:2}, time: {}'.format(n, result))
+        print('process: {:2}, time: {}'.format(n, result))
 
         for process in processes:
             process.kill()

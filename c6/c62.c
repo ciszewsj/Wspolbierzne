@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define VECTOR_LENGTH 1000000
+#define VECTOR_LENGTH 3000
 #define PART_LENGTH 1000
 
 void mpiCleanup()
@@ -35,7 +35,10 @@ int main(int argc, char **argv)
     if (cartesianRank == 0)
     {
         vector = malloc(VECTOR_LENGTH * sizeof(*vector));
-        memset(vector, 0, VECTOR_LENGTH * sizeof(*vector));
+        for (int i = 0; i < VECTOR_LENGTH; i++)
+        {
+            vector[i] = i;
+        }
     }
 
     long long sum = 0;
@@ -49,9 +52,10 @@ int main(int argc, char **argv)
             int shift = i * PART_LENGTH;
             memcpy(part, vector + shift, PART_LENGTH * sizeof(*part));
         }
-
-        MPI_Recv(part, PART_LENGTH, MPI_INT, previousCartesianRank, 0, cartesianCommunicator, MPI_STATUS_IGNORE);
-
+        else
+        {
+            MPI_Recv(part, PART_LENGTH, MPI_INT, previousCartesianRank, 0, cartesianCommunicator, MPI_STATUS_IGNORE);
+        }
         if (cartesianRank != 0 && cartesianRank != worldSize - 1)
         {
             for (int j = 0; j < PART_LENGTH; j++)
@@ -68,6 +72,7 @@ int main(int argc, char **argv)
         }
 
         MPI_Send(part, PART_LENGTH, MPI_INT, nextCartesianRank, 0, cartesianCommunicator);
+        printf("Wysłano %d < %d - %d >\n", cartesianRank, *(part), *(part + PART_LENGTH - 1));
     }
 
     if (cartesianRank == worldSize - 1)
