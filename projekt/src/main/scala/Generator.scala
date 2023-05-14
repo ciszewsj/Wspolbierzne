@@ -1,6 +1,6 @@
 object Generator extends App {
 
-  val size = 1000
+  val size = 2
 
   val path = ".\\resources\\"
 
