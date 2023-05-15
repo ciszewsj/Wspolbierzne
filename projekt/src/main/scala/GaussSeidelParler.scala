@@ -63,13 +63,11 @@ class RowActorGS(private val index: Array[Int], private val size: Int, private v
   }
 
   override def receive: Receive = {
-
     case Start(actors) =>
       this.actors = actors
       calculate()
 
     case SendNewX(index: Array[Int], y: Array[Double]) =>
-
       if (actors.last != self) {
         actors(actors.indexOf(self) + 1) ! SendNewX(index ++ this.index, y ++ this.index.map(i => x(i)))
       } else {
@@ -83,8 +81,10 @@ class RowActorGS(private val index: Array[Int], private val size: Int, private v
 
     case Stop =>
       end = true
+
     case Ended =>
       sender() ! this.end
+
     case Result =>
       sender() ! x
   }

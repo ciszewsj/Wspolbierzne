@@ -1,6 +1,6 @@
-import scala.concurrent.duration.FiniteDuration
 
-class GaussJordan(val eps: Double) extends Solver {
+
+class GaussJordan( val eps: Double) extends Solver {
   override def solve(A: Array[Array[Double]], Y: Array[Double]): Array[Double] = {
     val n = A.length
     val matrix = A.zip(Y).map { case (row1, row2) => row1 :+ row2 }

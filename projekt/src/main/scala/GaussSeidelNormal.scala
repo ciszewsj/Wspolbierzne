@@ -1,4 +1,4 @@
-class GaussSeidel(val eps: Double, val iteration: Int) extends Solver {
+class GaussSeidelNormal(val eps: Double, val iteration: Int) extends Solver {
   override def solve(A: Array[Array[Double]], Y: Array[Double]): Array[Double] = {
     val n = A.length
     val x = Array.fill(n)(0.0)

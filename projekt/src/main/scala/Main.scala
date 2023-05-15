@@ -37,14 +37,13 @@ object Main extends App {
   if (matrix._1.length != matrix._2.length || matrix._1.length != matrix._1(0).length) {
     throw new IllegalArgumentException("Matrix's sizes not comparable")
   }
-
   val solver: Solver = if (akka != 1) if (algorithm == 0) new GaussSeidelParler(timeoutTime, eps, iteration, akkaContainerSize) else new GaussJordanParler(timeoutTime, eps, akkaContainerSize)
-  else if (algorithm == 0) new GaussSeidel(eps, iteration) else new GaussJordan(timeoutTime, eps)
+  else if (algorithm == 0) new GaussSeidelNormal(eps, iteration) else new GaussJordan(eps)
   val time: Long = new Date().getTime
   println("Matrix loaded")
   val result = solver.solve(matrix._1, matrix._2)
   val executedTime = new Date().getTime - time
-  println("Result:\n" + printArray(result))
+//  println("Result:\n" + printArray(result))
   println(s"Executed in: $executedTime [ms]")
   val writer = new WriterFile(resultFileName)
   writer.saveMatrixToFile(result)
