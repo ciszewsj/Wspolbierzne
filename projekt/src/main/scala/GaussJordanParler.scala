@@ -47,11 +47,15 @@ class RowActorGJ(val indexes: Array[Int], var row: Array[Array[Double]]) extends
     case GetResult => sender() ! row.map(r => r.last)
 
     case GetMaxInMatrix(position: Int) =>
-      val index: Int = indexes.maxBy(index =>
-        Math.abs(row(indexes.indexOf(index))(position))
-      )
-      sender() ! MaxInMatrix(index, row(indexes.indexOf(index))(position), self)
-
+      try {
+        val index: Int = indexes.filter(index => index >= position).maxBy(index =>
+          Math.abs(row(indexes.indexOf(index))(position))
+        )
+        sender() ! MaxInMatrix(index, row(indexes.indexOf(index))(position), self)
+      } catch {
+        case e: Exception =>
+          sender() ! MaxInMatrix(-1, 0, null)
+      }
     case SetRow(index: Int, array: Array[Double]) =>
       row(indexes.indexOf(index)) = array
 
@@ -85,13 +89,13 @@ class GaussJordanParler(val timeoutTime: FiniteDuration, val eps: Double, chunkS
       for (i <- index) {
         val topIndex = actor_array.map(actor =>
           Await.result((actor ? GetMaxInMatrix(i)).mapTo[MaxInMatrix], timeoutTime)
-        ).maxBy(elem => elem.double)
+        ).filter(elem => elem.index != -1).maxBy(elem => elem.double)
         if (topIndex.index != i) {
           val tmp = Await.result((actor_array(commId) ? GetRow(i)).mapTo[GetRowResponse], timeoutTime).row
           val tmp2 = Await.result((topIndex.ref ? GetRow(topIndex.index)).mapTo[GetRowResponse], timeoutTime).row
 
-                    actor_array(commId) ! SetRow(i, tmp2)
-                    topIndex.ref ! SetRow(topIndex.index, tmp)
+          actor_array(commId) ! SetRow(i, tmp2)
+          topIndex.ref ! SetRow(topIndex.index, tmp)
         }
 
         actor_array(commId) ! Divide(i)
