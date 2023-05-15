@@ -53,14 +53,17 @@ class RowActorGS(private val index: Array[Int], private val size: Int, private v
         val x_new: Double = (y(itmp) - s1 - s2) / a(itmp)(localIndex)
         x(localIndex) = x_new
       })
-      if (actors(0) == self && actors.length > 1) {
-        actors(1) ! SendNewX(index, index.map(i => x(i)))
+      if (actors.last != self && actors.length > 1) {
+        actors.last ! SendNewX(index, index.map(i => x(i)))
       } else if (actors.length == 1) {
         actors(0) ! YieldNewX(index.map(i => x(i)))
       }
+      recived_values = index.length
       iteration += 1
     }
   }
+
+  var recived_values = 0
 
   override def receive: Receive = {
     case Start(actors) =>
@@ -68,11 +71,13 @@ class RowActorGS(private val index: Array[Int], private val size: Int, private v
       calculate()
 
     case SendNewX(index: Array[Int], y: Array[Double]) =>
-      if (actors.last != self) {
-        actors(actors.indexOf(self) + 1) ! SendNewX(index ++ this.index, y ++ this.index.map(i => x(i)))
-      } else {
-        index.zip(y).foreach { case (i, value) => x(i) = value }
-        actors.foreach(actor => actor ! YieldNewX(x))
+      recived_values += index.length
+      index.zip(y).foreach { case (i, value) => x(i) = value }
+      if (recived_values == size) {
+        actors.filter(actor => actor != self).foreach(actor => actor ! YieldNewX(x))
+        calculate()
+      } else if (recived_values > size) {
+        println("WTF ????")
       }
 
     case YieldNewX(x) =>
